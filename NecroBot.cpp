@@ -49,8 +49,11 @@ int main()
 	byte value = read_memory<byte>(process, LPVOID(is_debug));
 
 	printf("necrodancer is_debug:\t%x\n", value);
-	printf("engaging necrodancer debug...\n");
-	write_memory<byte>(process, LPVOID(is_debug), 1);
+
+	// Right now this is taken care of by the dll injection:
+	
+	//printf("engaging necrodancer debug...\n");
+	//write_memory<byte>(process, LPVOID(is_debug), 1);
 
 	printf("injecting dll...\n");
 	load_dll(process, L"C:\\Users\\ad0ra\\source\\repos\\NecroBot\\Debug\\NecroBotDll.dll"); // need full path for necrobotdll?
@@ -104,6 +107,7 @@ DWORD get_game_base(HANDLE process)
 	if (thread == nullptr)
 	{
 		printf("could not create remote thread\n");
+		return -1;
 	}
 	WaitForSingleObject(thread, INFINITE);
 	GetExitCodeThread(thread, &new_base);
@@ -137,13 +141,29 @@ void load_dll(HANDLE process, const wchar_t* dll_path)
 {
 	int namelen = wcslen(dll_path) + 1;
 	LPVOID remote_str = VirtualAllocEx(process, NULL, namelen * 2, MEM_COMMIT, PAGE_EXECUTE);
+
+	if(remote_str == nullptr)
+	{
+		return;
+	}
+
 	WriteProcessMemory(process, remote_str, dll_path, namelen * 2, NULL);
 
 	HMODULE k32 = GetModuleHandleA("kernel32.dll");
 	LPVOID func_addr = GetProcAddress(k32, "LoadLibraryW");
 
+	if(func_addr == nullptr)
+	{
+		return;
+	}
+
 	HANDLE thread =
 		CreateRemoteThread(process, NULL, NULL, (LPTHREAD_START_ROUTINE)func_addr, remote_str, NULL, NULL);
+
+	if(thread == nullptr)
+	{
+		return;
+	}
 
 	WaitForSingleObject(thread, INFINITE);
 	CloseHandle(thread);

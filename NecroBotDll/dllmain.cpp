@@ -4,6 +4,13 @@
 DWORD WINAPI runBot(LPVOID lpParam)
 {
 	MessageBoxA(NULL, "lol\n", "lol", MB_OK | MB_TOPMOST);
+	DWORD new_base;
+	__asm {
+		MOV EAX, DWORD PTR FS : [0x30] // find PEB
+		MOV EAX, DWORD PTR DS : [EAX + 0x8] // get module base address
+		MOV new_base, EAX
+	}
+	*((BYTE*)new_base + 0x435c1e) = 1;
 	return 1;
 }
 
